@@ -1,0 +1,16 @@
+# Environment
+.env
+
+# Go binaries
+api-simulator
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

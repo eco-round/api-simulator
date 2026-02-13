@@ -5,9 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"api-simulator/aggregator"
 	"api-simulator/datasources"
-	"api-simulator/models"
 )
 
 type MatchHandler struct {
@@ -36,9 +34,6 @@ func (h *MatchHandler) RegisterRoutes(r *gin.Engine) {
 
 	// Liquipedia endpoints
 	api.GET("/liquipedia/matches/:id", h.GetLiquipediaMatch)
-
-	// Aggregated oracle endpoint (what CRE workflow calls)
-	api.GET("/aggregated/matches/:id", h.GetAggregatedResult)
 }
 
 // ── PandaScore ───────────────────────────────────────────────────────────
@@ -80,41 +75,5 @@ func (h *MatchHandler) GetLiquipediaMatch(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, result)
-}
-
-// ── Aggregated (CRE calls this) ──────────────────────────────────────────
-
-func (h *MatchHandler) GetAggregatedResult(c *gin.Context) {
-	id := c.Param("id")
-
-	// Fetch from all 3 sources
-	var sources []models.SourceResult
-
-	if ps, err := h.pandaScore.GetResult(id); err == nil {
-		sources = append(sources, *ps)
-	}
-	if vlr, err := h.vlr.GetResult(id); err == nil {
-		sources = append(sources, *vlr)
-	}
-	if liq, err := h.liquipedia.GetResult(id); err == nil {
-		sources = append(sources, *liq)
-	}
-
-	if len(sources) == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no sources returned data for this match"})
-		return
-	}
-
-	// Get match info for team names
-	match, _ := h.pandaScore.GetMatch(id)
-	teamA := models.Team{Name: "Team A"}
-	teamB := models.Team{Name: "Team B"}
-	if match != nil {
-		teamA = match.TeamA
-		teamB = match.TeamB
-	}
-
-	result := aggregator.Aggregate(id, teamA, teamB, sources)
 	c.JSON(http.StatusOK, result)
 }
