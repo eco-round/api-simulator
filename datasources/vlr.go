@@ -36,10 +36,11 @@ func (v *VLR) GetResult(id string) (*models.SourceResult, error) {
 	}
 
 	return &models.SourceResult{
-		Source:    "vlr",
-		Winner:   result.Winner,
-		Result:   models.MatchResult{Winner: result.Winner, ScoreA: result.ScoreA, ScoreB: result.ScoreB, MapCount: result.MapCount},
-		Timestamp: time.Now(),
-		Confident: true,
+		Source:      "vlr",
+		MatchStatus: result.MatchStatus,
+		Winner:      result.Winner,
+		Result:      models.MatchResult{MatchStatus: result.MatchStatus, Winner: result.Winner, ScoreA: result.ScoreA, ScoreB: result.ScoreB, MapCount: result.MapCount},
+		Timestamp:   time.Now(),
+		Confident:   true,
 	}, nil
 }

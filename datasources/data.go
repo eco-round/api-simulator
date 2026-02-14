@@ -10,24 +10,26 @@ import (
 // toAPIMatch converts a DB match to an API response match.
 func toAPIMatch(m db.Match, source string) models.Match {
 	apiMatch := models.Match{
-		ID:         fmt.Sprintf("%d", m.ID),
-		ExternalID: fmt.Sprintf("%s-%d", source, m.ID),
-		TeamA:      models.Team{Name: m.TeamAName, Tag: m.TeamATag},
-		TeamB:      models.Team{Name: m.TeamBName, Tag: m.TeamBTag},
-		Status:     m.Status,
-		BestOf:     m.BestOf,
-		Event:      m.Event,
-		StartTime:  m.StartTime,
+		ID:           fmt.Sprintf("%d", m.ID),
+		ExternalID:   fmt.Sprintf("%s-%d", source, m.ID),
+		TeamA:        models.Team{Name: m.TeamAName, Tag: m.TeamATag},
+		TeamB:        models.Team{Name: m.TeamBName, Tag: m.TeamBTag},
+		Status:       m.Status,
+		BestOf:       m.BestOf,
+		Event:        m.Event,
+		VaultAddress: m.VaultAddress,
+		StartTime:    m.StartTime,
 	}
 
 	// Attach result from this source if available
 	var result db.MatchResult
 	if err := db.DB.Where("match_id = ? AND source = ?", m.ID, source).First(&result).Error; err == nil {
 		apiMatch.Result = &models.MatchResult{
-			Winner:   result.Winner,
-			ScoreA:   result.ScoreA,
-			ScoreB:   result.ScoreB,
-			MapCount: result.MapCount,
+			MatchStatus: result.MatchStatus,
+			Winner:      result.Winner,
+			ScoreA:      result.ScoreA,
+			ScoreB:      result.ScoreB,
+			MapCount:    result.MapCount,
 		}
 	}
 

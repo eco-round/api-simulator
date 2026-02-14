@@ -36,10 +36,11 @@ func (l *Liquipedia) GetResult(id string) (*models.SourceResult, error) {
 	}
 
 	return &models.SourceResult{
-		Source:    "liquipedia",
-		Winner:   result.Winner,
-		Result:   models.MatchResult{Winner: result.Winner, ScoreA: result.ScoreA, ScoreB: result.ScoreB, MapCount: result.MapCount},
-		Timestamp: time.Now(),
-		Confident: true,
+		Source:      "liquipedia",
+		MatchStatus: result.MatchStatus,
+		Winner:      result.Winner,
+		Result:      models.MatchResult{MatchStatus: result.MatchStatus, Winner: result.Winner, ScoreA: result.ScoreA, ScoreB: result.ScoreB, MapCount: result.MapCount},
+		Timestamp:   time.Now(),
+		Confident:   true,
 	}, nil
 }

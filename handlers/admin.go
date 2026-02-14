@@ -42,11 +42,12 @@ type UpdateStatusRequest struct {
 }
 
 type SetResultRequest struct {
-	Source   string `json:"source" binding:"required"`   // pandascore, vlr, liquipedia
-	Winner  string `json:"winner" binding:"required"`   // TeamA, TeamB
-	ScoreA  int    `json:"score_a"`
-	ScoreB  int    `json:"score_b"`
-	MapCount int   `json:"map_count"`
+	Source      string `json:"source" binding:"required"`       // pandascore, vlr, liquipedia
+	MatchStatus string `json:"match_status" binding:"required"` // upcoming, started, ended
+	Winner      string `json:"winner"`                          // TeamA, TeamB (required when ended)
+	ScoreA      int    `json:"score_a"`
+	ScoreB      int    `json:"score_b"`
+	MapCount    int    `json:"map_count"`
 }
 
 // ── Handlers ────────────────────────────────────────────────────────────
@@ -70,7 +71,7 @@ func (h *AdminHandler) CreateMatch(c *gin.Context) {
 		TeamBTag:  req.TeamBTag,
 		BestOf:    bestOf,
 		Event:     req.Event,
-		Status:    "upcoming",
+		Status:    "open",
 		StartTime: req.StartTime,
 	}
 
@@ -117,10 +118,10 @@ func (h *AdminHandler) UpdateMatchStatus(c *gin.Context) {
 	}
 
 	validStatuses := map[string]bool{
-		"upcoming": true, "live": true, "finished": true, "cancelled": true,
+		"open": true, "locked": true, "finished": true, "cancelled": true,
 	}
 	if !validStatuses[req.Status] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid status, must be: upcoming, live, finished, cancelled"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid status, must be: open, locked, finished, cancelled"})
 		return
 	}
 
@@ -145,18 +146,21 @@ func (h *AdminHandler) SetResult(c *gin.Context) {
 	}
 
 	// Validate source
-	validSources := map[string]bool{
-		"pandascore": true, "vlr": true, "liquipedia": true,
+	// Validate match_status
+	validStatuses := map[string]bool{
+		"upcoming": true, "started": true, "ended": true,
 	}
-	if !validSources[req.Source] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid source, must be: pandascore, vlr, liquipedia"})
+	if !validStatuses[req.MatchStatus] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid match_status, must be: upcoming, started, ended"})
 		return
 	}
 
-	// Validate winner
-	if req.Winner != "TeamA" && req.Winner != "TeamB" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "winner must be TeamA or TeamB"})
-		return
+	// Validate winner only if ended
+	if req.MatchStatus == "ended" {
+		if req.Winner != "TeamA" && req.Winner != "TeamB" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "winner must be TeamA or TeamB when match_status is ended"})
+			return
+		}
 	}
 
 	// Check match exists
@@ -170,12 +174,13 @@ func (h *AdminHandler) SetResult(c *gin.Context) {
 	db.DB.Where("match_id = ? AND source = ?", match.ID, req.Source).Delete(&db.MatchResult{})
 
 	result := db.MatchResult{
-		MatchID:  match.ID,
-		Source:   req.Source,
-		Winner:  req.Winner,
-		ScoreA:  req.ScoreA,
-		ScoreB:  req.ScoreB,
-		MapCount: req.MapCount,
+		MatchID:     match.ID,
+		Source:      req.Source,
+		MatchStatus: req.MatchStatus,
+		Winner:      req.Winner,
+		ScoreA:      req.ScoreA,
+		ScoreB:      req.ScoreB,
+		MapCount:    req.MapCount,
 	}
 
 	if err := db.DB.Create(&result).Error; err != nil {
