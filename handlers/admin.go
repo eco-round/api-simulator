@@ -22,23 +22,31 @@ func (h *AdminHandler) RegisterRoutes(r *gin.Engine) {
 	admin.GET("/matches", h.ListMatches)
 	admin.GET("/matches/:id", h.GetMatch)
 	admin.PATCH("/matches/:id", h.UpdateMatchStatus)
+	admin.PATCH("/matches/:id/vault", h.UpdateMatchVault)
 	admin.POST("/matches/:id/result", h.SetResult)
 }
 
 // ── Request Bodies ──────────────────────────────────────────────────────
 
 type CreateMatchRequest struct {
-	TeamAName string    `json:"team_a_name" binding:"required"`
-	TeamATag  string    `json:"team_a_tag"`
-	TeamBName string    `json:"team_b_name" binding:"required"`
-	TeamBTag  string    `json:"team_b_tag"`
-	BestOf    int       `json:"best_of"`
-	Event     string    `json:"event"`
-	StartTime time.Time `json:"start_time"`
+	TeamAName      string    `json:"team_a_name" binding:"required"`
+	TeamATag       string    `json:"team_a_tag"`
+	TeamBName      string    `json:"team_b_name" binding:"required"`
+	TeamBTag       string    `json:"team_b_tag"`
+	BestOf         int       `json:"best_of"`
+	Event          string    `json:"event"`
+	StartTime      time.Time `json:"start_time"`
+	OnChainMatchID uint      `json:"on_chain_match_id"`
+	VaultAddress   string    `json:"vault_address"`
 }
 
 type UpdateStatusRequest struct {
 	Status string `json:"status" binding:"required"` // upcoming, live, finished, cancelled
+}
+
+type UpdateVaultRequest struct {
+	OnChainMatchID uint   `json:"on_chain_match_id" binding:"required"`
+	VaultAddress   string `json:"vault_address" binding:"required"`
 }
 
 type SetResultRequest struct {
@@ -65,14 +73,16 @@ func (h *AdminHandler) CreateMatch(c *gin.Context) {
 	}
 
 	match := db.Match{
-		TeamAName: req.TeamAName,
-		TeamATag:  req.TeamATag,
-		TeamBName: req.TeamBName,
-		TeamBTag:  req.TeamBTag,
-		BestOf:    bestOf,
-		Event:     req.Event,
-		Status:    "open",
-		StartTime: req.StartTime,
+		TeamAName:      req.TeamAName,
+		TeamATag:       req.TeamATag,
+		TeamBName:      req.TeamBName,
+		TeamBTag:       req.TeamBTag,
+		BestOf:         bestOf,
+		Event:          req.Event,
+		Status:         "open",
+		StartTime:      req.StartTime,
+		OnChainMatchID: req.OnChainMatchID,
+		VaultAddress:   req.VaultAddress,
 	}
 
 	if err := db.DB.Create(&match).Error; err != nil {
@@ -189,4 +199,25 @@ func (h *AdminHandler) SetResult(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, result)
+}
+
+func (h *AdminHandler) UpdateMatchVault(c *gin.Context) {
+	id := c.Param("id")
+	var req UpdateVaultRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var match db.Match
+	if err := db.DB.First(&match, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "match not found"})
+		return
+	}
+
+	match.OnChainMatchID = req.OnChainMatchID
+	match.VaultAddress = req.VaultAddress
+	db.DB.Save(&match)
+
+	c.JSON(http.StatusOK, match)
 }

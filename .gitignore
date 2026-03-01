@@ -14,3 +14,4 @@ api-simulator
 # OS
 .DS_Store
 Thumbs.db
+.omc/
